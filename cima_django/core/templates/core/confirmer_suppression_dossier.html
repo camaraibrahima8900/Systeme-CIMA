@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titre %}Suppression forcée — {{ dossier.numero_dossier }} — CIMA{% endblock %}
+{% block contenu %}
+    <p><a href="javascript:history.back()">← Retour</a></p>
+    <div class="carte" style="border-left-color:var(--danger);">
+        <h2 style="border:none;margin-top:0;color:var(--danger);">⚠️ Suppression forcée — irréversible</h2>
+        <p>Vous êtes sur le point de supprimer <strong>définitivement</strong> le dossier
+           <strong>{{ dossier.numero_dossier }}</strong> ainsi que <strong>toutes</strong> les données qui lui sont liées :</p>
+        <ul style="color:var(--text-muted);font-size:14px;line-height:1.8;">
+            <li><strong>{{ nb_demandes }}</strong> demande{{ nb_demandes|pluralize }} d'indemnisation</li>
+            <li><strong>{{ nb_decisions }}</strong> décision{{ nb_decisions|pluralize }}</li>
+            <li><strong>{{ nb_paiements }}</strong> paiement{{ nb_paiements|pluralize }} (provisions + définitifs)</li>
+            <li><strong>{{ nb_documents }}</strong> document{{ nb_documents|pluralize }}</li>
+            <li><strong>{{ nb_notifications }}</strong> notification{{ nb_notifications|pluralize }}</li>
+        </ul>
+        <p style="color:var(--danger);font-weight:700;">Cette action est irréversible et ne peut pas être annulée.
+           Réservez-la aux dossiers de test — un vrai dossier légal/financier doit être clôturé, pas supprimé.</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="padding:12px 24px;"
+                    onclick="return confirm('Dernière confirmation : supprimer définitivement le dossier {{ dossier.numero_dossier }} et tout son contenu ?');">
+                🗑️ Je confirme la suppression définitive
+            </button>
+            <a href="javascript:history.back()" class="btn btn-secondary" style="padding:12px 24px;">Annuler</a>
+        </form>
+    </div>
+{% endblock %}

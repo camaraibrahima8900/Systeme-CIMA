@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block titre %}Espace Assistant — CIMA{% endblock %}
+{% block contenu %}
+    <div class="grille">
+        <div class="stat s-bleu"><div class="icone-stat">📁</div><div class="valeur">{{ dossiers.count }}</div><div class="label">Dossiers (zone)</div></div>
+        <div class="stat s-rose"><div class="icone-stat">🚗</div><div class="valeur">{{ accidents.count }}</div><div class="label">Accidents</div></div>
+        <div class="stat s-violet"><div class="icone-stat">💼</div><div class="valeur">{{ demandes.count }}</div><div class="label">Demandes</div></div>
+        <div class="stat s-ambre"><div class="icone-stat">⚠️</div><div class="valeur">{{ contestations.count }}</div><div class="label">Contestations</div></div>
+        <div class="stat s-ambre"><div class="icone-stat">🔔</div><div class="valeur">{{ notifications|length }}</div><div class="label">Notifications</div></div>
+    </div>
+
+    <p>
+        <a href="{% url 'creer_accident' %}" class="btn btn-warning">🚗 Enregistrer accident</a>
+        <a href="{% url 'creer_dossier' %}" class="btn btn-primary">➕ Créer dossier</a>
+        <a href="{% url 'contacts_assureurs' %}" class="btn btn-violet">🏦 Assureurs</a>
+        <a href="{% url 'contacts_victimes' %}" class="btn btn-rose">🧑 Victimes</a>
+    </p>
+
+    <h2 class="barre b-bleu">📁 Dossiers de ma zone</h2>
+    <form method="get" style="margin-bottom:16px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="🔍 Rechercher un dossier (n°, nom victime)…" class="champ" style="max-width:400px;display:inline-block;">
+        <button type="submit" class="btn btn-secondary">Rechercher</button>
+        {% if q %}<a href="{% url 'tableau_assistant' %}" class="btn btn-secondary">✖ Effacer</a>{% endif %}
+    </form>
+    <table class="t-bleu">
+        <thead><tr><th>N° Dossier</th><th>Victime</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for d in page_obj %}
+            <tr>
+                <td>{{ d.numero_dossier }}</td>
+                <td>{{ d.victime.prenom }} {{ d.victime.nom }}</td>
+                <td><span class="badge badge-{{ d.statut }}">{{ d.get_statut_display }}</span></td>
+                <td>{{ d.date_creation|date:"d/m/Y" }}</td>
+                <td class="actions">
+                    <a href="{% url 'detail_dossier' d.pk %}" class="btn btn-primary">👁️ Voir</a>
+                    <a href="{% url 'modifier_statut' d.pk %}" class="btn btn-bleu">🔄</a>
+                    <a href="{% url 'ajouter_document' d.pk %}" class="btn btn-emeraude">📄</a>
+                    <a href="{% url 'soumettre_demande' d.pk %}" class="btn btn-violet">💼</a>
+                    {% if d.statut == "PAYE" %}<a href="{% url 'cloturer_dossier' d.pk %}" class="btn btn-danger">🔒</a>{% endif %}
+                    {% if d.statut == "REJETE" %}<a href="{% url 'creer_recours' d.pk %}" class="btn btn-warning">🔄 Recours</a>{% endif %}
+                </td>
+            </tr>
+        {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">📁</div><div class="texte">Aucun dossier{% if q %} pour « {{ q }} »{% endif %}.</div>{% if not q %}<a href="{% url 'creer_dossier' %}" class="btn btn-primary action">➕ Créer un dossier</a>{% endif %}</div></td></tr>{% endfor %}
+    {% include "core/_pagination.html" %}
+        </tbody>
+    </table>
+
+    <details class="section-repliable">
+        <summary class="barre b-cyan">🗄️ Dossiers archivés (clôturés — conservation 10 ans)</summary>
+        <table class="t-cyan">
+            <thead><tr><th>N° Dossier</th><th>Victime</th><th>Clôturé le</th><th>Archivé jusqu'au</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for d in dossiers_archives %}
+                <tr>
+                    <td>{{ d.numero_dossier }}</td>
+                    <td>{{ d.victime.prenom }} {{ d.victime.nom }}</td>
+                    <td>{{ d.date_cloture|date:"d/m/Y" }}</td>
+                    <td>{{ d.date_cloture|timesince }} écoulés</td>
+                    <td><a href="{% url 'detail_dossier' d.pk %}" class="btn btn-bleu">👁️ Voir</a></td>
+                </tr>
+            {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">🗄️</div><div class="texte">Aucun dossier archivé pour le moment.</div></div></td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </details>
+
+    <h2 class="barre b-rose">🚗 Accidents récents</h2>
+    <table class="t-rose">
+        <thead><tr><th>ID</th><th>Date</th><th>Lieu</th><th>N° PV</th></tr></thead>
+        <tbody>
+        {% for a in accidents %}
+            <tr><td>{{ a.pk }}</td><td>{{ a.date_accident|date:"d/m/Y" }}</td><td>{{ a.lieu }}</td><td>{{ a.numero_pv }}</td></tr>
+        {% empty %}<tr><td colspan="4"><div class="etat-vide"><div class="icone">🚗</div><div class="texte">Aucun accident enregistré.</div><a href="{% url 'creer_accident' %}" class="btn btn-primary action">🚗 Enregistrer un accident</a></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="barre b-violet">💼 Demandes soumises</h2>
+    <table class="t-violet">
+        <thead><tr><th>N° Suivi</th><th>Dossier</th><th>Assureur</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody>
+        {% for dem in demandes %}
+            <tr>
+                <td>{{ dem.numero_suivi }}</td><td>{{ dem.dossier.numero_dossier }}</td>
+                <td>{{ dem.assureur.prenom }} {{ dem.assureur.nom }}</td>
+                <td>{{ dem.montant_reclame }} FCFA</td><td>{{ dem.get_statut_display }}</td>
+            </tr>
+        {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">💼</div><div class="texte">Aucune demande soumise.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="barre b-ambre">⚠️ Contestations à transmettre</h2>
+    <table class="t-ambre">
+        <thead><tr><th>Dossier</th><th>Montant</th><th>Motif</th><th>Statut</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for c in contestations %}
+            <tr>
+                <td>{{ c.dossier.numero_dossier|default:c.decision.demande.dossier.numero_dossier }}</td>
+                <td>{{ c.montant_paye }} FCFA</td><td>{{ c.commentaire_victime|default:"—" }}</td>
+                <td><span class="badge badge-{{ c.statut_confirmation }}">{{ c.get_statut_confirmation_display }}</span></td>
+                <td>
+                    {% if c.statut_confirmation == "CONTESTE" %}
+                        <a href="{% url 'transmettre_contestation' c.pk %}" class="btn btn-warning">📢 Transmettre</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">✅</div><div class="texte">Aucune contestation à transmettre.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <p><a href="{% url 'mes_notifications' %}" class="btn btn-ambre">🔔 Voir toutes mes notifications</a></p>
+{% endblock %}

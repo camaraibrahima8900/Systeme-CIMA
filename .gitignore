@@ -1,0 +1,8 @@
+cima_django/.env
+certs/
+certs/
+cima_django/rootCA.pem
+documents_stockes/
+cima_django/documents_stockes/
+*.zip
+*:Zone.Identifier

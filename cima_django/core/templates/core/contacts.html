@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titre %}{{ titre }} — CIMA{% endblock %}
+{% block contenu %}
+    <h2>{{ titre }}</h2>
+    <form method="get" style="margin-bottom:16px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="🔍 Rechercher (nom, prénom, email…)" class="champ" style="max-width:320px;display:inline-block;">
+        <button type="submit" class="btn btn-secondary">Rechercher</button>
+        {% if q %}<a href="?" class="btn btn-secondary">✖ Effacer</a>{% endif %}
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>Nom</th><th>Prénom</th><th>📧 Email</th><th>📱 Téléphone</th>
+                {% if colonne_extra == "zone" %}<th>Zone d'intervention</th>{% endif %}
+                {% if colonne_extra == "compagnie" %}<th>Compagnie</th><th>N° Agrément CIMA</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in acteurs %}
+            <tr>
+                <td>{{ a.nom }}</td><td>{{ a.prenom }}</td><td>{{ a.email }}</td><td>{{ a.telephone }}</td>
+                {% if colonne_extra == "zone" %}<td>{{ a.profil_assistant.zone_intervention|default:"—" }}</td>{% endif %}
+                {% if colonne_extra == "compagnie" %}
+                    <td>{{ a.profil_assureur.nom_compagnie|default:"—" }}</td>
+                    <td>{{ a.profil_assureur.numero_agrement_cima|default:"—" }}</td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr><td colspan="6"><div class="etat-vide"><div class="icone">👥</div><div class="texte">Aucun contact trouvé.</div></div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p><a href="javascript:history.back()">← Retour</a></p>
+{% endblock %}

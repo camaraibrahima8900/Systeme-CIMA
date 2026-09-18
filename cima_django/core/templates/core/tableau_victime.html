@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titre %}Espace Victime — CIMA{% endblock %}
+{% block contenu %}
+    <div class="grille">
+        <div class="stat s-bleu"><div class="icone-stat">📁</div><div class="valeur">{{ dossiers.count }}</div><div class="label">Mes dossiers</div></div>
+        <div class="stat s-emeraude"><div class="icone-stat">💰</div><div class="valeur">{{ groupes_paiements|length }}</div><div class="label">Dossiers avec paiement</div></div>
+        <div class="stat s-ambre"><div class="icone-stat">🔔</div><div class="valeur">{{ notifications|length }}</div><div class="label">Notifications</div></div>
+    </div>
+
+    <h2 class="barre b-bleu">📁 Mes dossiers</h2>
+    <table class="t-bleu">
+        <thead><tr><th>N° Dossier</th><th>Statut</th><th>Assistant</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for d in page_obj %}
+            <tr>
+                <td>{{ d.numero_dossier }}</td>
+                <td><span class="badge badge-{{ d.statut }}">{{ d.get_statut_display }}</span></td>
+                <td>{{ d.assistant.prenom }} {{ d.assistant.nom }}</td>
+                <td>{{ d.date_creation|date:"d/m/Y" }}</td>
+                <td class="actions">
+                    <a href="{% url 'detail_dossier' d.pk %}" class="btn btn-primary">👁️ Voir</a>
+                    {% if d.statut == "REJETE" %}
+                        <a href="{% url 'contester_rejet' d.pk %}" class="btn btn-danger">❌ Contester</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">📁</div><div class="texte">Aucun dossier pour le moment.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+    {% include "core/_pagination.html" %}
+
+    <p><a href="{% url 'contacts_assistants_victime' %}" class="btn btn-cyan">📞 Contacter un assistant</a></p>
+
+    <h2 class="barre b-emeraude">💰 Mes paiements — par dossier</h2>
+    {% for dossier, liste_paiements in groupes_paiements %}
+        <details class="carte" style="margin-bottom:14px;">
+            <summary style="cursor:pointer;font-weight:bold;font-size:15px;">
+                📁 Dossier {{ dossier.numero_dossier }}
+                <span style="color:#8b949e;font-weight:normal;font-size:12px;">({{ liste_paiements|length }} paiement{{ liste_paiements|length|pluralize }})</span>
+            </summary>
+            <table class="t-emeraude" style="margin-top:12px;margin-bottom:0;">
+                <thead><tr><th>Type</th><th>Montant</th><th>Mode</th><th>Statut</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for p in liste_paiements %}
+                    <tr>
+                        <td>{{ p.get_type_paiement_display }}</td>
+                        <td>{{ p.montant_paye }} FCFA</td>
+                        <td>{{ p.get_mode_paiement_display }}</td>
+                        <td><span class="badge badge-{{ p.statut_confirmation }}">{{ p.get_statut_confirmation_display }}</span></td>
+                        <td class="actions">
+                            {% if p.type_paiement == "DEFINITIF" and p.statut_confirmation == "EN_ATTENTE" %}
+                                <a href="{% url 'confirmer_paiement' p.pk %}" class="btn btn-primary">✅ Confirmer</a>
+                                <a href="{% url 'contester_paiement' p.pk %}" class="btn btn-danger">❌ Contester</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </details>
+    {% empty %}
+        <div class="etat-vide"><div class="icone">💰</div><div class="texte">Aucun paiement pour le moment.</div></div>
+    {% endfor %}
+
+    <p><a href="{% url 'mes_notifications' %}" class="btn btn-ambre">🔔 Voir toutes mes notifications</a></p>
+{% endblock %}

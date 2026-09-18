@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titre %}{{ titre }} — CIMA{% endblock %}
+{% block contenu %}
+    <h2>{{ titre }}</h2>
+    <div class="carte" style="max-width:500px;">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for champ in form %}
+                <div class="champ-formulaire" data-name="{{ champ.name }}" style="margin-bottom:14px;">
+                    <label>{{ champ.label }}</label>
+                    {{ champ }}
+                    {% for erreur in champ.errors %}<p style="color:#f85149;font-size:12px;">{{ erreur }}</p>{% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">✅ Valider</button>
+        </form>
+    </div>
+    <p><a href="javascript:history.back()">← Retour</a></p>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const typeSelect = document.querySelector("#id_type_document");
+    const ligneOffre = document.querySelector('[data-name="demande_liee"]');
+    const ligneMontant = document.querySelector('[data-name="montant_offre"]');
+    if (typeSelect && (ligneOffre || ligneMontant)) {
+        function basculer() {
+            const estOffre = typeSelect.value === "PROPOSITION_OFFRE";
+            if (ligneOffre) ligneOffre.style.display = estOffre ? "" : "none";
+            if (ligneMontant) ligneMontant.style.display = estOffre ? "" : "none";
+        }
+        typeSelect.addEventListener("change", basculer);
+        basculer();
+    }
+
+    // Recherche dans les listes déroulantes à choix nombreux (Victime, Accident...)
+    document.querySelectorAll("select").forEach(function (select) {
+        if (select.options.length < 8) return;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "champ";
+        input.placeholder = "🔍 Rechercher dans la liste…";
+        input.style.marginBottom = "6px";
+        select.parentNode.insertBefore(input, select);
+
+        const optionsOriginales = Array.from(select.options);
+        input.addEventListener("input", function () {
+            const terme = input.value.toLowerCase();
+            select.innerHTML = "";
+            optionsOriginales.forEach(function (opt) {
+                if (opt.value === "" || opt.text.toLowerCase().includes(terme)) {
+                    select.appendChild(opt);
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

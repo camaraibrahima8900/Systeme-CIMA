@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Système CIMA — Gestion numérique des dossiers de victimes d'accidents routiers (CIMA).">
+    <meta name="theme-color" content="#0a0f1c">
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <title>{% block titre %}Système CIMA{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/cima.css' %}">
+    <script>
+        (function () {
+            var theme = localStorage.getItem('cima-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body{% if request.user.cima_role %} data-role="{{ request.user.cima_role }}"{% endif %}>
+    <div class="bande-identite"></div>
+    <header>
+        <h1><span class="pastille-role"></span>🏥 Système CIMA</h1>
+        <div>
+            {% if request.user.is_authenticated %}
+                <button type="button" id="toggle-theme" title="Changer de thème">🌙</button>
+                <details class="cloche-notif">
+                    <summary>🔔{% if notif_non_lues_count %}<span class="badge-compteur">{{ notif_non_lues_count }}</span>{% endif %}</summary>
+                    <div class="dropdown-notif">
+                        <div class="entete">Notifications récentes</div>
+                        {% for n in notif_recentes %}
+                            <a class="item" href="{% url 'voir_dossier_notification' n.dossier.pk %}">
+                                <span class="msg">{{ n.message|truncatechars:80 }}</span>
+                                <span class="date">Dossier {{ n.dossier.numero_dossier }} · {{ n.date_envoi|date:"d/m/Y" }}</span>
+                            </a>
+                        {% empty %}
+                            <div class="vide">Aucune notification.</div>
+                        {% endfor %}
+                        <a class="voir-tout" href="{% url 'mes_notifications' %}">Voir toutes mes notifications →</a>
+                    </div>
+                </details>
+                <span class="perimetre">
+                    {{ request.user.cima_role|default:"—"|capfirst }}
+                    {% if request.user.cima_zone %} · Zone : {{ request.user.cima_zone }}{% endif %}
+                </span>
+                <a href="{% url 'deconnexion' %}" class="btn btn-danger">🚪 Déconnexion</a>
+            {% endif %}
+        </div>
+    </header>
+
+{% if request.user.is_authenticated %}
+<nav class="nav-cima">
+    {% if request.user.cima_role == "victime" %}
+        <a href="{% url 'tableau_victime' %}" class="{% if request.resolver_match.url_name == 'tableau_victime' %}actif{% endif %}">🏠 Tableau de bord</a>
+        <a href="{% url 'contacts_assistants_victime' %}" class="{% if request.resolver_match.url_name == 'contacts_assistants_victime' %}actif{% endif %}">📞 Contacter un assistant</a>
+    {% elif request.user.cima_role == "assistant" %}
+        <a href="{% url 'tableau_assistant' %}" class="{% if request.resolver_match.url_name == 'tableau_assistant' %}actif{% endif %}">🏠 Tableau de bord</a>
+        <a href="{% url 'contacts_assureurs' %}" class="{% if request.resolver_match.url_name == 'contacts_assureurs' %}actif{% endif %}">🏦 Assureurs</a>
+        <a href="{% url 'contacts_victimes' %}" class="{% if request.resolver_match.url_name == 'contacts_victimes' %}actif{% endif %}">🧑 Victimes</a>
+    {% elif request.user.cima_role == "assureur" %}
+        <a href="{% url 'tableau_assureur' %}" class="{% if request.resolver_match.url_name == 'tableau_assureur' %}actif{% endif %}">🏠 Tableau de bord</a>
+        <a href="{% url 'contacts_assistants_assureur' %}" class="{% if request.resolver_match.url_name == 'contacts_assistants_assureur' %}actif{% endif %}">📞 Assistants</a>
+    {% elif request.user.cima_role == "administrateur" %}
+        <a href="{% url 'tableau_admin' %}" class="{% if request.resolver_match.url_name == 'tableau_admin' %}actif{% endif %}">🏠 Tableau de bord</a>
+        <a href="{% url 'ajouter_acteur' %}" class="{% if request.resolver_match.url_name == 'ajouter_acteur' %}actif{% endif %}">➕ Ajouter un acteur</a>
+    {% endif %}
+    <a href="{% url 'mes_notifications' %}" class="{% if request.resolver_match.url_name == 'mes_notifications' %}actif{% endif %}">🔔 Mes notifications</a>
+</nav>
+{% endif %}
+
+<main>
+        {% if messages %}
+            <ul class="messages">
+                {% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+        {% block contenu %}{% endblock %}
+    </main>
+
+    <button id="retour-haut" title="Retour en haut">↑</button>
+
+    <script>
+        // Bascule mode sombre / clair
+        var btnTheme = document.getElementById('toggle-theme');
+        if (btnTheme) {
+            var majIcone = function () {
+                btnTheme.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+            };
+            majIcone();
+            btnTheme.addEventListener('click', function () {
+                var actuel = document.documentElement.getAttribute('data-theme') || 'light';
+                var nouveau = actuel === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', nouveau);
+                localStorage.setItem('cima-theme', nouveau);
+                majIcone();
+            });
+        }
+
+        // Bouton retour en haut
+        var btnHaut = document.getElementById('retour-haut');
+        window.addEventListener('scroll', function () {
+            if (window.scrollY > 400) {
+                btnHaut.classList.add('visible');
+            } else {
+                btnHaut.classList.remove('visible');
+            }
+        });
+        btnHaut.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

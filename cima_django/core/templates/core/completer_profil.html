@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titre %}Bienvenue — CIMA{% endblock %}
+{% block contenu %}
+    <h2>👋 Bienvenue {{ request.user.first_name }} {{ request.user.last_name }} !</h2>
+    <p style="color:#8b949e;">Complétez votre profil pour accéder au système CIMA.</p>
+    <div class="carte" style="max-width:500px;">
+        <form method="post">
+            {% csrf_token %}
+            {% for champ in form %}
+                <label>{{ champ.label }}</label>
+                {{ champ }}
+                {% for erreur in champ.errors %}<p style="color:#f85149;font-size:12px;">{{ erreur }}</p>{% endfor %}
+            {% endfor %}
+            <p style="font-size:12px; color:#8b949e;">Remplissez "Nom de la compagnie" si Assureur, ou "Zone d'intervention" si Assistant.</p>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">✅ Valider et continuer</button>
+        </form>
+    </div>
+{% endblock %}

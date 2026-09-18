@@ -1,0 +1,127 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    pull_policy: never
+    container_name: cima_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: gestion_dossiers_victimes
+      MYSQL_USER: ibrahima
+      MYSQL_PASSWORD: "8900"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./dossiers_victimes_accidents.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./keycloak_db.sql:/docker-entrypoint-initdb.d/02_keycloak.sql
+    networks:
+      - cima_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "ibrahima", "-p8900"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # tkinter:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.tkinter
+  #   pull_policy: never
+  #   container_name: cima_tkinter
+  #   restart: unless-stopped
+  #   environment:
+  #     KC_ADMIN_CLIENT_ID: cima-service
+  #     KC_ADMIN_CLIENT_SECRET: CPi08XZpUHZ3TAuFtWRMGNPDZJD0luMB
+  #     DISPLAY: ${DISPLAY}
+  #     DB_HOST: mysql
+  #     DB_PORT: 3306
+  #     DB_USER: ibrahima
+  #     DB_PASSWORD: "8900"
+  #     DB_NAME: gestion_dossiers_victimes
+  #   volumes:
+  #     - ./app:/app
+  #     - /tmp/.X11-unix:/tmp/.X11-unix
+  #     - ./documents_stockes:/app/documents_stockes
+  #     - /mnt/c:/mnt/c
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #   networks:
+  #     - cima_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    pull_policy: never
+    container_name: cima_keycloak
+    restart: on-failure
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin1234
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql:3306/keycloak_db?allowPublicKeyRetrieval=true&useSSL=false
+      KC_DB_USERNAME: ibrahima
+      KC_DB_PASSWORD: "8900"
+      KC_HOSTNAME: cima-auth
+      KC_HOSTNAME_PORT: "8443"
+      KC_HOSTNAME_STRICT_HTTPS: "true"
+      KC_PROXY: edge
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - cima_network
+
+  django:
+    build:
+      context: ./cima_django
+      dockerfile: Dockerfile.django
+    container_name: cima_django
+    restart: always
+    env_file:
+      - ./cima_django/.env
+    environment:
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./cima_django:/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - cima_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: cima_nginx
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "443:443"
+      - "8443:8443"
+    depends_on:
+      - django
+      - keycloak
+    networks:
+      cima_network:
+        aliases:
+          - cima-auth
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  cima_network:
+    driver: bridge

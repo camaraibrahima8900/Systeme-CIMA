@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block titre %}Demande {{ demande.numero_suivi }} — CIMA{% endblock %}
+{% block contenu %}
+    <p><a href="{% url 'tableau_assureur' %}">← Retour à mon espace</a></p>
+
+    <div class="carte">
+        <h2 style="margin-top:0;">💼 Demande {{ demande.numero_suivi }}
+            <span class="badge badge-{{ demande.statut }}">{{ demande.get_statut_display }}</span>
+        </h2>
+        <p><strong>Dossier :</strong> {{ dossier.numero_dossier }}</p>
+        <p><strong>Victime :</strong> {{ dossier.victime.prenom }} {{ dossier.victime.nom }}</p>
+        <p><strong>Accident :</strong> {{ dossier.accident.lieu }} — {{ dossier.accident.date_accident|date:"d/m/Y" }}</p>
+        <p><strong>Type de demande :</strong> {{ demande.get_type_demande_display }}</p>
+        <p><strong>Montant réclamé :</strong> {{ demande.montant_reclame }} FCFA</p>
+        {% if demande.montant_evalue %}<p><strong>Montant évalué :</strong> {{ demande.montant_evalue }} FCFA</p>{% endif %}
+        {% if demande.montant_offre %}<p><strong>Montant offert :</strong> {{ demande.montant_offre }} FCFA</p>{% endif %}
+        <p><strong>Phase de négociation :</strong> <span class="badge badge-{{ demande.phase }}">{{ demande.get_phase_display }}</span></p>
+        {% if demande.decision %}
+            <p><strong>Décision :</strong>
+                <span class="badge badge-{{ demande.decision.resultat }}">{{ demande.decision.get_resultat_display }}</span>
+                le {{ demande.decision.date_decision|date:"d/m/Y" }}
+                {% if demande.decision.motif %} — {{ demande.decision.motif }}{% endif %}
+            </p>
+        {% endif %}
+    </div>
+
+    <h2>📄 Documents du dossier — timeline ({{ documents.count }})</h2>
+    <p><a href="{% url 'ajouter_document_assureur' dossier.pk %}" class="btn btn-primary">📄 Ajouter un document</a></p>
+    <table>
+        <thead><tr><th>Type</th><th>Ajouté par</th><th>Fichier</th><th>Statut</th><th>Ajouté le</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for doc in documents %}
+            <tr>
+                <td>{{ doc.get_type_document_display }}</td>
+                <td>
+                    {% if doc.ajoute_par %}
+                        {{ doc.ajoute_par.get_role_display }} — {{ doc.ajoute_par.prenom }} {{ doc.ajoute_par.nom }}
+                    {% else %}—{% endif %}
+                </td>
+                <td><a href="{{ doc.url_fichier }}" target="_blank">📎 Consulter</a></td>
+                <td><span class="badge badge-{{ doc.statut_validation }}">{{ doc.get_statut_validation_display }}</span></td>
+                <td>{{ doc.date_upload|date:"d/m/Y" }}</td>
+                <td class="actions">
+                    {% if doc.ajoute_par.role != "assureur" and doc.statut_validation == "EN_ATTENTE" %}
+                        <a href="{% url 'valider_document' doc.pk %}" class="btn btn-primary">✅ Valider</a>
+                        <a href="{% url 'rejeter_document' doc.pk %}" class="btn btn-danger">❌ Rejeter</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6"><div class="etat-vide"><div class="icone">⚠️</div><div class="texte">Aucun document fourni pour ce dossier.</div></div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <p>
+        {% if demande.statut != "TRAITEE" %}
+            <a href="{% url 'enregistrer_evaluation' demande.pk %}" class="btn btn-primary">⚖️ Enregistrer une évaluation</a>
+            <a href="{% url 'enregistrer_decision' demande.pk %}" class="btn btn-emeraude">✅ Enregistrer une décision (directe)</a>
+        {% else %}
+            <a href="{% url 'reexaminer_demande' demande.pk %}" class="btn btn-ambre" onclick="return confirm('Déverrouiller cette demande pour un nouveau réexamen ?');">🔓 Réexaminer</a>
+        {% endif %}
+        <a href="{% url 'verser_provision' dossier.pk %}" class="btn btn-warning">💵 Verser une provision</a>
+        {% if demande.decision.resultat == "VALIDEE" and not demande.decision.paiement %}
+            <a href="{% url 'enregistrer_paiement_definitif' demande.decision.pk %}" class="btn btn-primary">💰 Payer</a>
+        {% elif demande.decision.paiement.statut_confirmation == "CONTESTE" %}
+            <a href="{% url 'enregistrer_paiement_definitif' demande.decision.pk %}" class="btn btn-primary">💰 Repayer</a>
+        {% elif demande.decision.paiement.statut_confirmation == "TRANSMIS_ASSUREUR" %}
+            <a href="{% url 'enregistrer_paiement_definitif' demande.decision.pk %}" class="btn btn-primary">💰 Repayer</a>
+        {% endif %}
+    </p>
+
+    <h2>🔔 Notifications de ce dossier</h2>
+    <table>
+        <thead><tr><th>Message</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for n in notifications_dossier %}
+            <tr><td>{{ n.message }}</td><td>{{ n.date_envoi|date:"d/m/Y" }}</td></tr>
+        {% empty %}<tr><td colspan="2"><div class="etat-vide"><div class="icone">🔔</div><div class="texte">Aucune notification pour ce dossier.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

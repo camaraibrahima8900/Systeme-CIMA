@@ -1,0 +1,15 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:10px 0 26px;">
+    {% if page_obj.has_previous %}
+        <a href="?{{ param_name }}={{ page_obj.previous_page_number }}{{ extra_qs }}" class="btn btn-secondary">← Précédent</a>
+    {% else %}
+        <span class="btn btn-secondary" style="opacity:.35;pointer-events:none;">← Précédent</span>
+    {% endif %}
+    <span style="color:#8b949e;font-size:12.5px;">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} — {{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }}</span>
+    {% if page_obj.has_next %}
+        <a href="?{{ param_name }}={{ page_obj.next_page_number }}{{ extra_qs }}" class="btn btn-secondary">Suivant →</a>
+    {% else %}
+        <span class="btn btn-secondary" style="opacity:.35;pointer-events:none;">Suivant →</span>
+    {% endif %}
+</div>
+{% endif %}

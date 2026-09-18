@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block titre %}Espace Administrateur — CIMA{% endblock %}
+{% block contenu %}
+    <div class="grille">
+        <div class="stat s-violet"><div class="icone-stat">👥</div><div class="valeur">{{ acteurs.count }}</div><div class="label">Acteurs</div></div>
+        <div class="stat s-bleu"><div class="icone-stat">📁</div><div class="valeur">{{ dossiers.count }}</div><div class="label">Dossiers</div></div>
+        <div class="stat s-cyan"><div class="icone-stat">📄</div><div class="valeur">{{ documents.count }}</div><div class="label">Documents</div></div>
+        <div class="stat s-violet"><div class="icone-stat">💼</div><div class="valeur">{{ demandes.count }}</div><div class="label">Demandes</div></div>
+        <div class="stat s-cyan"><div class="icone-stat">⚖️</div><div class="valeur">{{ decisions.count }}</div><div class="label">Décisions</div></div>
+        <div class="stat s-emeraude"><div class="icone-stat">💰</div><div class="valeur">{{ paiements.count }}</div><div class="label">Paiements</div></div>
+    </div>
+
+    <p><a href="{% url 'ajouter_acteur' %}" class="btn btn-primary">➕ Ajouter un acteur</a></p>
+
+    <details class="section-repliable">
+        <summary class="barre b-bleu">📁 Dossiers — supervision globale (toutes zones)</summary>
+        <form method="get" style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" name="q" value="{{ q }}" placeholder="🔍 N° dossier, victime, zone…" class="champ" style="max-width:280px;margin:0;">
+            <select name="statut" class="champ" style="max-width:200px;margin:0;">
+                <option value="">Tous les statuts</option>
+                {% for code, libelle in statuts_disponibles %}
+                    <option value="{{ code }}" {% if statut_filtre == code %}selected{% endif %}>{{ libelle }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary">Filtrer</button>
+            {% if q or statut_filtre %}<a href="{% url 'tableau_admin' %}" class="btn btn-secondary">✖ Réinitialiser</a>{% endif %}
+        </form>
+        <table class="t-bleu">
+            <thead><tr><th>N° Dossier</th><th>Victime</th><th>Assistant</th><th>Zone</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for d in page_dossiers %}
+                <tr>
+                    <td>{{ d.numero_dossier }}</td>
+                    <td>{{ d.victime.prenom }} {{ d.victime.nom }}</td>
+                    <td>{{ d.assistant.prenom }} {{ d.assistant.nom }}</td>
+                    <td>{{ d.zone|default:"—" }}</td>
+                    <td><span class="badge badge-{{ d.statut }}">{{ d.get_statut_display }}</span></td>
+                    <td class="actions">
+                        <a href="{% url 'detail_dossier' d.pk %}" class="btn btn-primary">👁️ Voir</a>
+                        <a href="{% url 'forcer_suppression_dossier' d.pk %}" class="btn btn-danger" style="background:#7a1620;" title="Suppression forcée en cascade">⚠️🗑️</a>
+                    </td>
+                </tr>
+            {% empty %}<tr><td colspan="6"><div class="etat-vide"><div class="icone">📁</div><div class="texte">Aucun dossier{% if q or statut_filtre %} pour ces critères{% endif %}.</div></div></td></tr>{% endfor %}
+            </tbody>
+        </table>
+        {% include "core/_pagination.html" with page_obj=page_dossiers param_name="page_d" extra_qs=extra_qs %}
+    </details>
+
+    <details class="section-repliable">
+        <summary class="barre b-violet">👥 Acteurs (tous rôles, toutes zones)</summary>
+        <form method="get" style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" name="q_acteur" value="{{ q_acteur }}" placeholder="🔍 Nom, prénom, email, rôle…" class="champ" style="max-width:280px;margin:0;">
+            <button type="submit" class="btn btn-secondary">Rechercher</button>
+            {% if q_acteur %}<a href="{% url 'tableau_admin' %}" class="btn btn-secondary">✖ Effacer</a>{% endif %}
+        </form>
+        <table class="t-violet">
+            <thead><tr><th>ID</th><th>Nom</th><th>Prénom</th><th>Email</th><th>Rôle</th><th>Actif</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for a in page_acteurs %}
+                <tr>
+                    <td>{{ a.pk }}</td><td>{{ a.nom }}</td><td>{{ a.prenom }}</td><td>{{ a.email }}</td>
+                    <td>{{ a.get_role_display }}</td><td>{{ a.actif|yesno:"✅,❌" }}</td>
+                    <td class="actions">
+                        <a href="{% url 'modifier_acteur' a.pk %}" class="btn btn-bleu">✏️</a>
+                        {% if a.role != "administrateur" %}
+                            {% if a.actif %}
+                                <a href="{% url 'basculer_actif_acteur' a.pk %}" class="btn btn-warning" onclick="return confirm('Bloquer l\'accès de {{ a.prenom }} {{ a.nom }} ?');">🔒 Bloquer</a>
+                            {% else %}
+                                <a href="{% url 'basculer_actif_acteur' a.pk %}" class="btn btn-emeraude">🔓 Débloquer</a>
+                            {% endif %}
+                            <a href="{% url 'supprimer_objet' 'acteur' a.pk %}" class="btn btn-danger" onclick="return confirm('Supprimer cet acteur ?')">🗑️</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% include "core/_pagination.html" with page_obj=page_acteurs param_name="page_a" extra_qs="&q_acteur="|add:q_acteur %}
+    </details>
+
+    <details class="section-repliable">
+        <summary class="barre b-emeraude">💰 Paiements — par dossier</summary>
+        <form method="get" style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" name="q_paiement" value="{{ q_paiement }}" placeholder="🔍 N° dossier…" class="champ" style="max-width:280px;margin:0;">
+            <button type="submit" class="btn btn-secondary">Rechercher</button>
+            {% if q_paiement %}<a href="{% url 'tableau_admin' %}" class="btn btn-secondary">✖ Effacer</a>{% endif %}
+        </form>
+        {% for dossier, liste_paiements in page_paiements %}
+            <details class="carte" style="margin-bottom:12px;">
+                <summary style="cursor:pointer;font-weight:bold;font-size:14px;">
+                    📁 Dossier {{ dossier.numero_dossier }}
+                    <span style="color:#8b949e;font-weight:normal;font-size:12px;">({{ liste_paiements|length }} paiement{{ liste_paiements|length|pluralize }})</span>
+                    {% if dossier.statut == "CLOTURE" %}
+                        <span class="badge badge-CLOTURE">🗄️ Clôturé / archivé</span>
+                    {% endif %}
+                </summary>
+                <table class="t-emeraude" style="margin-top:12px;margin-bottom:0;">
+                    <thead><tr><th>ID</th><th>Type</th><th>Montant</th><th>Provisions déduites</th><th>Statut</th></tr></thead>
+                    <tbody>
+                    {% for p in liste_paiements %}
+                        <tr>
+                            <td>{{ p.pk }}</td><td>{{ p.get_type_paiement_display }}</td>
+                            <td>{{ p.montant_paye }} FCFA</td><td>{{ p.montant_provisions_deduites }} FCFA</td>
+                            <td><span class="badge badge-{{ p.statut_confirmation }}">{{ p.get_statut_confirmation_display }}</span></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </details>
+        {% empty %}
+            <div class="etat-vide"><div class="icone">💰</div><div class="texte">Aucun paiement enregistré.</div></div>
+        {% endfor %}
+        {% include "core/_pagination.html" with page_obj=page_paiements param_name="page_p" extra_qs="&q_paiement="|add:q_paiement %}
+    </details>
+{% endblock %}

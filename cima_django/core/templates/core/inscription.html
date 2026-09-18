@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titre %}Créer un compte — CIMA{% endblock %}
+{% block contenu %}
+    <h2>📝 Créer un compte</h2>
+    <p style="color:#8b949e;">Rejoignez le système CIMA — création 100% dans l'application.</p>
+    <div class="carte" style="max-width:520px;">
+        <form method="post">
+            {% csrf_token %}
+            {% for champ in form %}
+                {% if champ.name != "role" %}
+                    <label>{{ champ.label }}</label>
+                    {{ champ }}
+                    {% for erreur in champ.errors %}<p style="color:#f85149;font-size:12px;">{{ erreur }}</p>{% endfor %}
+                {% endif %}
+            {% endfor %}
+
+            <label style="font-weight:bold;">Je m'inscris en tant que :</label>
+            {{ form.role }}
+            {% for erreur in form.role.errors %}<p style="color:#f85149;font-size:12px;">{{ erreur }}</p>{% endfor %}
+
+            <br><button type="submit" class="btn btn-primary" style="width:100%; padding:12px; margin-top:16px;">✅ Créer mon compte</button>
+        </form>
+    </div>
+    <p><a href="{% url 'oidc_authentication_init' %}">← Retour à la connexion</a></p>
+{% endblock %}

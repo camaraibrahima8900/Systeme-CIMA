@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block titre %}Espace Assureur — CIMA{% endblock %}
+{% block contenu %}
+    <div class="grille">
+        <div class="stat s-violet"><div class="icone-stat">💼</div><div class="valeur">{{ demandes.count }}</div><div class="label">Demandes</div></div>
+        <div class="stat s-cyan"><div class="icone-stat">⚖️</div><div class="valeur">{{ decisions.count }}</div><div class="label">Décisions</div></div>
+        <div class="stat s-ambre"><div class="icone-stat">⚠️</div><div class="valeur">{{ contestations.count }}</div><div class="label">Contestations</div></div>
+        <div class="stat s-ambre"><div class="icone-stat">🔔</div><div class="valeur">{{ notifications|length }}</div><div class="label">Notifications</div></div>
+    </div>
+
+    <p><a href="{% url 'contacts_assistants_assureur' %}" class="btn btn-cyan">📞 Contacter un assistant</a></p>
+    <h2 class="barre b-violet">💼 Demandes reçues — par dossier</h2>
+    <form method="get" style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="text" name="q" value="{{ q }}" placeholder="🔍 N° dossier, victime, n° suivi…" class="champ" style="max-width:300px;margin:0;">
+        <button type="submit" class="btn btn-secondary">Rechercher</button>
+        {% if q %}<a href="{% url 'tableau_assureur' %}" class="btn btn-secondary">✖ Effacer</a>{% endif %}
+    </form>
+    {% for dossier, liste_demandes in page_obj %}
+        <details class="carte" style="margin-bottom:14px;">
+            <summary style="cursor:pointer;font-weight:bold;font-size:15px;">
+                📁 Dossier {{ dossier.numero_dossier }}
+                <span style="color:#8b949e;font-weight:normal;font-size:12px;">({{ liste_demandes|length }} demande{{ liste_demandes|length|pluralize }})</span>
+                {% if dossier.statut == "CLOTURE" %}
+                    <span class="badge badge-CLOTURE">🗄️ Clôturé / archivé</span>
+                {% endif %}
+            </summary>
+            <table class="t-violet" style="margin-top:12px;margin-bottom:0;">
+                <thead><tr><th>N° Suivi</th><th>Type</th><th>Montant réclamé</th><th>Montant évalué</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for d in liste_demandes %}
+                    <tr>
+                        <td>{{ d.numero_suivi }}</td>
+                        <td>{{ d.get_type_demande_display }}</td>
+                        <td>{{ d.montant_reclame }} FCFA</td>
+                        <td>{{ d.montant_evalue|default:"—" }}</td>
+                        <td><span class="badge badge-{{ d.statut }}">{{ d.get_statut_display }}</span></td>
+                        <td class="actions">
+                            <a href="{% url 'detail_demande' d.pk %}" class="btn btn-primary">👁️ Voir dossier</a>
+                            {% if d.statut != "TRAITEE" %}
+                                <a href="{% url 'enregistrer_evaluation' d.pk %}" class="btn btn-cyan">⚖️ Évaluer</a>
+                                <a href="{% url 'enregistrer_decision' d.pk %}" class="btn btn-emeraude">✅ Décider</a>
+                                <a href="{% url 'verser_provision' d.dossier.pk %}" class="btn btn-warning">💵 Provision</a>
+                            {% else %}
+                                <a href="{% url 'reexaminer_demande' d.pk %}" class="btn btn-ambre" onclick="return confirm('Déverrouiller cette demande pour un nouveau réexamen ?');">🔓 Réexaminer</a>
+                            {% endif %}
+                            {% if d.decision.resultat == "VALIDEE" and not d.decision.paiement %}
+                                <a href="{% url 'enregistrer_paiement_definitif' d.decision.pk %}" class="btn btn-primary">💰 Payer</a>
+                            {% elif d.decision.paiement.statut_confirmation == "CONTESTE" %}
+                                <a href="{% url 'enregistrer_paiement_definitif' d.decision.pk %}" class="btn btn-primary">💰 Repayer</a>
+                            {% elif d.decision.paiement.statut_confirmation == "TRANSMIS_ASSUREUR" %}
+                                <a href="{% url 'enregistrer_paiement_definitif' d.decision.pk %}" class="btn btn-primary">💰 Repayer</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </details>
+    {% empty %}
+        <div class="etat-vide"><div class="icone">💼</div><div class="texte">Aucune demande{% if q %} pour « {{ q }} »{% else %} reçue pour le moment{% endif %}.</div></div>
+    {% endfor %}
+    {% include "core/_pagination.html" %}
+
+    <h2 class="barre b-cyan">⚖️ Décisions rendues <span style="font-size:12px;color:rgba(255,255,255,.75);font-weight:normal;">(dossiers actifs — vidé après clôture/archivage)</span></h2>
+    <table class="t-cyan">
+        <thead><tr><th>Demande</th><th>Résultat</th><th>Motif</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for dec in decisions %}
+            <tr>
+                <td>{{ dec.demande.numero_suivi }}</td>
+                <td><span class="badge badge-{{ dec.resultat }}">{{ dec.get_resultat_display }}</span></td>
+                <td>{{ dec.motif|default:"—" }}</td>
+                <td>{{ dec.date_decision|date:"d/m/Y" }}</td>
+                <td>
+                    {% if dec.resultat == "VALIDEE" and not dec.paiement %}
+                        <a href="{% url 'enregistrer_paiement_definitif' dec.pk %}" class="btn btn-primary">💰 Payer</a>
+                    {% elif dec.paiement.statut_confirmation == "CONTESTE" %}
+                        <a href="{% url 'enregistrer_paiement_definitif' dec.pk %}" class="btn btn-primary">💰 Repayer</a>
+                    {% elif dec.paiement.statut_confirmation == "TRANSMIS_ASSUREUR" %}
+                        <a href="{% url 'enregistrer_paiement_definitif' dec.pk %}" class="btn btn-primary">💰 Repayer</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}<tr><td colspan="5"><div class="etat-vide"><div class="icone">⚖️</div><div class="texte">Aucune décision rendue pour le moment.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="barre b-ambre">⚠️ Contestations de paiement reçues</h2>
+    <table class="t-ambre">
+        <thead><tr><th>Dossier</th><th>Montant</th><th>Motif de la victime</th><th>Statut</th></tr></thead>
+        <tbody>
+        {% for c in contestations %}
+            <tr>
+                <td>{{ c.decision.demande.dossier.numero_dossier }}</td>
+                <td>{{ c.montant_paye }} FCFA</td>
+                <td>{{ c.commentaire_victime|default:"—" }}</td>
+                <td><span class="badge badge-{{ c.statut_confirmation }}">{{ c.get_statut_confirmation_display }}</span></td>
+            </tr>
+        {% empty %}<tr><td colspan="4"><div class="etat-vide"><div class="icone">⚠️</div><div class="texte">Aucune contestation transmise.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <p><a href="{% url 'mes_notifications' %}" class="btn btn-ambre">🔔 Voir toutes mes notifications</a></p>
+{% endblock %}

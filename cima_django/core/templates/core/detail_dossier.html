@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block titre %}Dossier {{ dossier.numero_dossier }} — CIMA{% endblock %}
+{% block contenu %}
+    <p>
+        <a href="{% url 'tableau_assistant' %}">← Retour au tableau de bord</a>
+        {% if request.user.cima_role == "victime" %}<a href="{% url 'tableau_victime' %}">← Retour à mon espace</a>{% endif %}
+    </p>
+
+    <div class="carte">
+        <h2 style="margin-top:0;">📁 {{ dossier.numero_dossier }}
+            <span class="badge badge-{{ dossier.statut }}">{{ dossier.get_statut_display }}</span>
+        </h2>
+        <p><strong>Victime :</strong> {{ dossier.victime.prenom }} {{ dossier.victime.nom }}</p>
+        <p><strong>Accident :</strong> {{ dossier.accident.lieu }} — {{ dossier.accident.date_accident|date:"d/m/Y" }} (PV {{ dossier.accident.numero_pv|default:"—" }})</p>
+        <p><strong>Zone :</strong> {{ dossier.zone|default:"—" }}</p>
+        <p><strong>Créé le :</strong> {{ dossier.date_creation|date:"d/m/Y" }}</p>
+        {% if dossier.date_cloture %}
+            <p><strong>Clôturé le :</strong> {{ dossier.date_cloture|date:"d/m/Y" }}</p>
+            <p><strong>🗄️ Archivé jusqu'au :</strong> {{ date_archivage|date:"d/m/Y" }} (conservation 10 ans — Code CIMA)</p>
+        {% endif %}
+    </div>
+
+    {% if request.user.cima_role == "assistant" %}
+    <p>
+        <a href="{% url 'ajouter_document' dossier.pk %}" class="btn btn-emeraude">📄 Ajouter un document</a>
+        <a href="{% url 'soumettre_demande' dossier.pk %}" class="btn btn-primary">💼 Soumettre une demande</a>
+        <a href="{% url 'modifier_statut' dossier.pk %}" class="btn btn-bleu">🔄 Modifier statut</a>
+        {% if dossier.statut == "PAYE" %}
+            <a href="{% url 'cloturer_dossier' dossier.pk %}" class="btn btn-danger">🔒 Clôturer le dossier</a>
+        {% endif %}
+        {% if dossier.statut == "REJETE" %}
+            <a href="{% url 'creer_recours' dossier.pk %}" class="btn btn-warning">🔄 Créer un recours</a>
+        {% endif %}
+    </p>
+    {% if dossier.statut == "REJETE" %}
+        <p style="color:var(--text-faint);font-size:13px;">💡 Ajoutez d'abord les pièces manquantes ci-dessous avant de créer le recours.</p>
+    {% endif %}
+    {% endif %}
+
+    <h2>📄 Documents — timeline ({{ documents.count }})</h2>
+    <table>
+        <thead><tr><th>Type</th><th>Ajouté par</th><th>Fichier</th><th>Statut</th><th>Ajouté le</th>{% if request.user.cima_role == "assistant" or request.user.cima_role == "administrateur" %}<th>Action</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for doc in documents %}
+            <tr>
+                <td>{{ doc.get_type_document_display }}</td>
+                <td>
+                    {% if doc.ajoute_par %}
+                        {{ doc.ajoute_par.get_role_display }} — {{ doc.ajoute_par.prenom }} {{ doc.ajoute_par.nom }}
+                    {% else %}—{% endif %}
+                </td>
+                <td><a href="{{ doc.url_fichier }}" target="_blank">📎 Ouvrir</a></td>
+                <td><span class="badge badge-{{ doc.statut_validation }}">{{ doc.get_statut_validation_display }}</span></td>
+                <td>{{ doc.date_upload|date:"d/m/Y" }}</td>
+                {% if request.user.cima_role == "assistant" %}
+                <td>
+                    {% if doc.ajoute_par.role != "assureur" and dossier.statut == "EN_CONSTITUTION" or dossier.statut == "DOSSIER_COMPLET" %}
+                        <a href="{% url 'supprimer_document' doc.pk %}" class="btn btn-danger" onclick="return confirm('Retirer ce document du dossier ?');">🗑️ Retirer</a>
+                    {% else %}
+                        <span style="color:var(--text-faint);font-size:12px;">verrouillé</span>
+                    {% endif %}
+                </td>
+                {% elif request.user.cima_role == "administrateur" %}
+                <td>
+                    <a href="{% url 'supprimer_objet' 'document' doc.pk %}" class="btn btn-danger" onclick="return confirm('Supprimer définitivement ce document ?');">🗑️ Supprimer</a>
+                </td>
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr><td colspan="6"><div class="etat-vide"><div class="icone">📄</div><div class="texte">Aucun document ajouté pour l'instant.</div></div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>🔔 Notifications de ce dossier</h2>
+    <table>
+        <thead><tr><th>Message</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for n in notifications_dossier %}
+            <tr><td>{{ n.message }}</td><td>{{ n.date_envoi|date:"d/m/Y" }}</td></tr>
+        {% empty %}<tr><td colspan="2"><div class="etat-vide"><div class="icone">🔔</div><div class="texte">Aucune notification pour ce dossier.</div></div></td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <h2>💼 Demandes d'indemnisation</h2>
+    <table>
+        <thead><tr><th>N° Suivi</th><th>Type</th><th>Montant réclamé</th><th>Montant évalué</th><th>Offre</th><th>Phase</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for dem in demandes %}
+            <tr>
+                <td><strong>{{ dem.numero_suivi }}</strong></td>
+                <td>{{ dem.get_type_demande_display }}</td>
+                <td>{{ dem.montant_reclame }} FCFA</td>
+                <td>{{ dem.montant_evalue|default:"—" }}</td>
+                <td>{{ dem.montant_offre|default:"—" }}</td>
+                <td><span class="badge badge-{{ dem.phase }}">{{ dem.get_phase_display }}</span></td>
+                <td><span class="badge badge-{{ dem.statut }}">{{ dem.get_statut_display }}</span></td>
+                <td class="actions">
+                    {% if request.user.cima_role == "victime" and dem.phase == "OFFRE_TRANSMISE" %}
+                        <a href="{% url 'accepter_offre' dem.pk %}" class="btn btn-primary" onclick="return confirm('Accepter cette offre de {{ dem.montant_offre }} FCFA ? Cette action valide définitivement le dossier.');">✅ Accepter l'offre</a>
+                        <a href="{% url 'refuser_offre' dem.pk %}" class="btn btn-danger">❌ Refuser l'offre</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="8"><div class="etat-vide"><div class="icone">💼</div><div class="texte">Aucune demande soumise pour ce dossier.</div></div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

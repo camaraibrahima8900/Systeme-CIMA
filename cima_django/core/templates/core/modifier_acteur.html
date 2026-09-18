@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titre %}Modifier acteur — CIMA{% endblock %}
+{% block contenu %}
+    <h2>✏️ Modifier — {{ acteur.prenom }} {{ acteur.nom }}</h2>
+    <div class="carte" style="max-width:500px;">
+        <form method="post">
+            {% csrf_token %}
+            <label>Nom</label>
+            <input type="text" name="nom" value="{{ acteur.nom }}" class="champ">
+            <label>Prénom</label>
+            <input type="text" name="prenom" value="{{ acteur.prenom }}" class="champ">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ acteur.email }}" class="champ">
+            <label>Rôle</label>
+            <select name="role" class="champ">
+                <option value="victime" {% if acteur.role == "victime" %}selected{% endif %}>Victime</option>
+                <option value="assistant" {% if acteur.role == "assistant" %}selected{% endif %}>Assistant</option>
+                <option value="assureur" {% if acteur.role == "assureur" %}selected{% endif %}>Assureur</option>
+                <option value="administrateur" {% if acteur.role == "administrateur" %}selected{% endif %}>Administrateur</option>
+            </select>
+            <label><input type="checkbox" name="actif" {% if acteur.actif %}checked{% endif %}> Compte actif</label>
+            <br><br>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px;">✅ Enregistrer</button>
+        </form>
+    </div>
+    <p><a href="{% url 'tableau_admin' %}">← Retour</a></p>
+{% endblock %}
