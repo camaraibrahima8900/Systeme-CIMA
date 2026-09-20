@@ -6,3 +6,4 @@ documents_stockes/
 cima_django/documents_stockes/
 *.zip
 *:Zone.Identifier
+certs_aiven/
