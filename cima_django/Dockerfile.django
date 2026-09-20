@@ -5,6 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --upgrade pip --no-cache-dir
 
 COPY requirements.txt .
@@ -14,6 +17,8 @@ COPY rootCA.pem /usr/local/share/ca-certificates/mkcert-rootCA.crt
 RUN update-ca-certificates
 
 COPY . .
+
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

@@ -13,6 +13,18 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="change-moi-en-production")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
+# ============================================================
+# SÉCURITÉ PRODUCTION — actifs uniquement quand DEBUG=False
+# ============================================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -27,6 +39,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -58,19 +71,37 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # ============================================================
-# BASE DE DONNÉES — la même base MySQL que le prototype Tkinter
+# BASE DE DONNÉES — locale (Tkinter/Docker) ou Aiven (test/prod)
 # ============================================================
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": config("DB_NAME", default="gestion_dossiers_victimes"),
-        "USER": config("DB_USER", default="ibrahima"),
-        "PASSWORD": config("DB_PASSWORD", default="8900"),
-        "HOST": config("DB_HOST", default="mysql"),
-        "PORT": config("DB_PORT", default="3306"),
-        "OPTIONS": {"charset": "utf8mb4"},
+DB_ENGINE = config("DB_ENGINE", default="local")
+
+if DB_ENGINE == "aiven":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": config("AIVEN_DB_NAME"),
+            "USER": config("AIVEN_DB_USER"),
+            "PASSWORD": config("AIVEN_DB_PASSWORD"),
+            "HOST": config("AIVEN_DB_HOST"),
+            "PORT": config("AIVEN_DB_PORT"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "ssl": {"ca": config("AIVEN_SSL_CA")},
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": config("DB_NAME", default="gestion_dossiers_victimes"),
+            "USER": config("DB_USER", default="ibrahima"),
+            "PASSWORD": config("DB_PASSWORD", default="8900"),
+            "HOST": config("DB_HOST", default="mysql"),
+            "PORT": config("DB_PORT", default="3306"),
+            "OPTIONS": {"charset": "utf8mb4"},
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = []  # les mots de passe sont gérés par Keycloak, pas par Django
 
@@ -93,6 +124,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 MEDIA_URL = "/documents/"
 MEDIA_ROOT = BASE_DIR / "documents_stockes"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -132,4 +169,7 @@ LOGOUT_REDIRECT_URL = "/"
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://cima-auth:8443']
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="https://localhost,https://cima-auth:8443"
+).split(",")
