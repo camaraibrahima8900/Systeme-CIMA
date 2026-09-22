@@ -13,8 +13,8 @@ RUN pip install --upgrade pip --no-cache-dir
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY rootCA.pem /usr/local/share/ca-certificates/mkcert-rootCA.crt
-RUN update-ca-certificates
+#COPY rootCA.pem /usr/local/share/ca-certificates/mkcert-rootCA.crt
+#RUN update-ca-certificates
 
 COPY . .
 
