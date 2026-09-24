@@ -1,0 +1,57 @@
+/* searchable-select.css
+   Styles minimalistes pour le composant de recherche sur <select>.
+   S'adapte au thème existant de l'application (couleurs neutres,
+   à ajuster si besoin selon la charte du Système CIMA). */
+
+.searchable-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.searchable-select-input:focus {
+  outline: none;
+  border-color: #2e7d5b;
+  box-shadow: 0 0 0 2px rgba(46, 125, 91, 0.15);
+}
+
+.searchable-select-liste {
+  position: absolute;
+  z-index: 50;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.searchable-select-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.searchable-select-item:hover {
+  background: #f0f4f2;
+}
+
+.searchable-select-item--vide {
+  color: #888;
+  cursor: default;
+}
+
+.searchable-select-item--vide:hover {
+  background: transparent;
+}
