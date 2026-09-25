@@ -173,3 +173,51 @@ CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
     default="https://localhost,https://cima-auth:8443"
 ).split(",")
+
+
+# ============================================================
+# À ajouter dans cima_django/config/settings.py
+# (à la fin du fichier, ou n'importe où au niveau racine du module)
+# ============================================================
+#
+# Pourquoi : sans ce bloc, quand DEBUG=False, Django n'envoie les
+# erreurs 500 qu'à mail_admins (email) — rien n'apparaît dans les
+# logs Render. Ce LOGGING ajoute un handler console qui affiche
+# la traceback complète dans stdout, donc visible dans
+# Render -> systeme-cima-indemnisation -> Logs.
+#
+# ============================================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Optionnel : logs applicatifs de core/ si tu ajoutes des logger.error() toi-même
+        "core": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
