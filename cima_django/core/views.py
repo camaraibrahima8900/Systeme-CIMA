@@ -293,7 +293,9 @@ def tableau_assistant(request):
     page_obj = paginator.get_page(request.GET.get("page"))
     extra_qs = f"&q={q}" if q else ""
 
-    accidents = Accident.objects.exclude(dossiers__statut="CLOTURE").order_by("-id_accident")[:20]
+    accidents = Accident.objects.filter(
+        dossiers__in=dossiers_visibles_par(request.user)
+    ).exclude(dossiers__statut="CLOTURE").distinct().order_by("-id_accident")[:20]
     demandes = DemandeIndemnisation.objects.filter(
         dossier__in=dossiers_visibles_par(request.user)
     ).exclude(dossier__statut="CLOTURE").select_related("dossier", "assureur").order_by("-id_demande")
